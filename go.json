@@ -1,0 +1,59 @@
+{
+	"Fan-out goroutines": {
+	 	"prefix": ["fanout"],
+	 	"body": [
+			"workerCount := $1",
+			"inChannel := make(chan $2, workerCount)",
+			"outChannel := make(chan $3, workerCount)",
+			"",
+			"// Goroutine sends data to inbound channel and closes it on exit.",
+			"go func() {",
+			"\tdefer close(inChannel)",
+			"\t// TODO Generate data to send to inChannel",
+			"\tinChannel <- $4",
+			"}()",
+			"",
+			"var wg sync.WaitGroup",
+			"wg.Add(workerCount)",
+			"for i:=0; i<workerCount; i++ {",
+			"\t// Worker goroutine reads from inbound channel and sends data to outbound channel.",
+			"\tgo func() {",
+			"\t\tdefer wg.Done()",
+			"\t\tfor in := range inChannel {",
+			"\t\t\t// TODO Generate data to send to outChannel",
+			"\t\t\toutChannel <- $5",
+			"\t\t}",
+			"\t}()",
+			"}",
+			"",
+			"// Goroutine closes outbound channel when all worker goroutines are stopped.",
+			"go func()  {",
+			"\twg.Wait()",
+			"\tclose(outChannel)",
+			"}()",
+			"",
+			"// Reads from outbound channel.",
+			"for out := range outChannel {",
+			"\t// TODO Process data read from outChannel",
+			"\t${6:fmt.Println(out)}",
+			"}"
+	 	],
+	 	"description": "Multiple worker goroutines read from the same inbound channel until that channel is closed; workers also send data to the same outbound channel and that channel is closed when all workers are stopped."
+	},
+	"Interrupt signal goroutine": {
+		"prefix": ["interrupt"],
+		"body": [
+			"done := make(chan struct{})",
+			"",
+			"// Goroutine closes done channel when interrupt signal is relayed",
+			"go func() {",
+			"\tsig := make(chan os.Signal, 1)",
+			"\tsignal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)",
+			"\t<-sig",
+			"\tclose(done)",
+			"}()",
+			"$0"
+		],
+		"description": "Close \"done\" channel when interrupt signal is relayed."
+   }
+}
